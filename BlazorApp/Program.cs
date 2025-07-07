@@ -1,4 +1,5 @@
 using AuthExtensions;
+using BlazorApp;
 using BlazorApp.Components;
 using BlazorApp.Components.Account;
 using BlazorApp.Extensions;
@@ -7,11 +8,23 @@ using Database;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Radzen;
+using Serilog;
+using SerilogBlazor.Postgres;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var connectionString = AppDbFactory.GetConnectionString();
+
+var logLevels = new ApplicationLogLevels();
+Log.Logger = logLevels
+    .GetConfiguration()
+    .WriteTo.PostgreSQL(connectionString, "serilog", columnOptions: PostgresColumnOptions.Default, needAutoCreateTable: true)
+    .Enrich.FromLogContext()
+    .CreateLogger();
+
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddRadzenComponents();
+builder.Services.AddSerilog();
 
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();

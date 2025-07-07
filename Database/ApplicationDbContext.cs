@@ -70,10 +70,15 @@ public class AppDbFactory : IDesignTimeDbContextFactory<ApplicationDbContext>
 		.AddUserSecrets("ba97db6d-dd37-488c-8da5-819a88b19558")
 		.Build();
 
+	public static string GetConnectionString(string[]? args = null)
+	{
+		var connectionName = args?.Length == 1 ? args[0] : Config.GetValue<string>("ConnectionName") ?? "DefaultConnection";
+		return Config.GetConnectionString(connectionName) ?? throw new Exception($"Connection string '{connectionName}' not found");
+	}
+	
 	public ApplicationDbContext CreateDbContext(string[] args)
 	{
-		var connectionName = args.Length == 1 ? args[0] : Config.GetValue<string>("ConnectionName") ?? "DefaultConnection";
-		var connectionString = Config.GetConnectionString(connectionName) ?? throw new Exception($"Connection string '{connectionName}' not found");
+		var connectionString = GetConnectionString(args);
 		var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
 		optionsBuilder.UseNpgsql(connectionString);
 		return new ApplicationDbContext(optionsBuilder.Options);

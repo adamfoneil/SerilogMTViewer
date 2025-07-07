@@ -3,12 +3,12 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>aspnet-BlazorApp-dfc08afb-f04e-4037-8894-f66fdedd5bcd</UserSecretsId>
-    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>    
+    <ImplicitUsings>enable</ImplicitUsings>   
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>   
+    <UserSecretsId>ba97db6d-dd37-488c-8da5-819a88b19558</UserSecretsId>    
   </PropertyGroup>
 
-	<ItemGroup>
+  <ItemGroup>
     <None Include="..\README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
@@ -23,6 +23,12 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.4" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
 	<PackageReference Include="Radzen.Blazor" Version="6.6.1" />
+	<PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+	<PackageReference Include="Serilog.Blazor.Abstractions" Version="1.0.6" />
+	<PackageReference Include="Serilog.Blazor.ApiConnector" Version="1.0.7" />
+	<PackageReference Include="Serilog.Blazor.Postgres" Version="1.0.1" />
+	<PackageReference Include="Serilog.Blazor.RCL" Version="1.0.3" />
+	<PackageReference Include="Serilog.Sinks.PostgreSQL" Version="2.3.0" />
   </ItemGroup>
 
   <ItemGroup>
