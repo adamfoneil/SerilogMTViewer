@@ -7,8 +7,8 @@ using Database.Conventions;
 namespace Database;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
-{
-	public DbSet<Item> Items { get; set; }
+{	
+	public DbSet<Connection> Connections { get; set; }
 
 	protected override void OnModelCreating(ModelBuilder builder)
 	{
@@ -67,7 +67,7 @@ public class AppDbFactory : IDesignTimeDbContextFactory<ApplicationDbContext>
 {
 	private static IConfiguration Config => new ConfigurationBuilder()
 		.AddJsonFile("appsettings.json", optional: false)
-		.AddUserSecrets("72dae383-f598-4836-9da3-57756a01bcd0")
+		.AddUserSecrets("ba97db6d-dd37-488c-8da5-819a88b19558")
 		.Build();
 
 	public ApplicationDbContext CreateDbContext(string[] args)
