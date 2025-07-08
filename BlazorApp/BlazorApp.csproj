@@ -38,7 +38,7 @@
 	<PackageReference Include="Serilog.Blazor.ApiConnector" Version="1.0.7" />
 	<PackageReference Include="Serilog.Blazor.ApiConnectorClient" Version="1.0.7" />
 	<PackageReference Include="Serilog.Blazor.Postgres" Version="1.0.1" />
-	<PackageReference Include="Serilog.Blazor.RCL" Version="1.0.3" />
+	<PackageReference Include="Serilog.Blazor.RCL" Version="1.0.4" />
 	<PackageReference Include="Serilog.Sinks.PostgreSQL" Version="2.3.0" />
   </ItemGroup>
 
