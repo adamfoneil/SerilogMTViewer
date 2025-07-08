@@ -10,7 +10,8 @@
 	<Columns>
 		<RadzenDataGridColumn TItem="Connection" Title="Application Name" Property="ApplicationName">
 			<EditTemplate>
-				<RadzenTextBox @bind-Value="context.ApplicationName" Placeholder="Application Name" MaxLength="100" />
+				<RadzenRequiredValidator Component="ApplicationName" Text="Application name is required" />
+				<RadzenTextBox @bind-Value="context.ApplicationName" Name="ApplicationName" Placeholder="Application Name" MaxLength="100" />
 			</EditTemplate>
 		</RadzenDataGridColumn>
 		<RadzenDataGridColumn TItem="Connection" Title="Endpoint" Property="Endpoint">
@@ -18,7 +19,8 @@
 				<span style="white-space:normal">@context.Endpoint</span>
 			</Template>
 			<EditTemplate>
-				<RadzenTextBox @bind-Value="context.Endpoint" Placeholder="API Endpoint URL" MaxLength="200" />
+				<RadzenRequiredValidator Component="Endpoint" Text="Endpoint URL is required" />
+				<RadzenTextBox @bind-Value="context.Endpoint" Name="Endpoint" Placeholder="API Endpoint URL" MaxLength="200" />
 			</EditTemplate>
 		</RadzenDataGridColumn>
 		<RadzenDataGridColumn TItem="Connection" Title="Header Secret" Property="HeaderSecret">
@@ -26,7 +28,8 @@
 				<span>@(string.IsNullOrEmpty(context.HeaderSecret) ? "" : "●●●●●●●●")</span>
 			</Template>
 			<EditTemplate>
-				<RadzenTextBox @bind-Value="context.HeaderSecret" Placeholder="Secret Key" MaxLength="100" />
+				<RadzenRequiredValidator Component="HeaderSecret" Text="Header secret is required" />
+				<RadzenTextBox @bind-Value="context.HeaderSecret" Name="HeaderSecret" Placeholder="Secret Key" MaxLength="100" />
 			</EditTemplate>
 		</RadzenDataGridColumn>
 		<RadzenDataGridColumn TItem="Connection" Title="Created" Property="CreatedAt" FormatString="{0:yyyy-MM-dd HH:mm}">
@@ -58,21 +61,39 @@
 
 	private async Task SaveConnection(Connection row)
 	{
-		using var db = DbFactory.CreateDbContext();
-		
-		// Ensure the connection is owned by the current user
-		row.OwnerUserId = user!.UserId;
-		
-		db.Connections.Update(row);
-		await db.SaveChangesAsync(user);
-		await LoadConnections();
+		try
+		{
+			using var db = DbFactory.CreateDbContext();
+			
+			// Ensure the connection is owned by the current user
+			row.OwnerUserId = user!.UserId;
+			
+			db.Connections.Update(row);
+			await db.SaveChangesAsync(user);
+			await LoadConnections();
+		}
+		catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("IX_Connections_OwnerUserId_ApplicationName") == true)
+		{
+			await Dialogs.Alert("A connection with this application name already exists.", "Duplicate Application Name");
+		}
+		catch (Exception ex)
+		{
+			await Dialogs.Alert($"An error occurred while saving: {ex.Message}", "Error");
+		}
 	}
 
 	private async Task DeleteConnection(Connection row)
 	{
-		using var db = DbFactory.CreateDbContext();
-		db.Connections.Remove(row);
-		await db.SaveChangesAsync(user);
-		await LoadConnections();
+		try
+		{
+			using var db = DbFactory.CreateDbContext();
+			db.Connections.Remove(row);
+			await db.SaveChangesAsync(user);
+			await LoadConnections();
+		}
+		catch (Exception ex)
+		{
+			await Dialogs.Alert($"An error occurred while deleting: {ex.Message}", "Error");
+		}
 	}
 }
