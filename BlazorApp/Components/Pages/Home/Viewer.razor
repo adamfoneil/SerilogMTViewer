@@ -1,10 +1,154 @@
 ﻿@using SerilogBlazor.ConnectorClient
+@using SerilogBlazor.Abstractions
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject SerilogApiConnectorClient Client
 @attribute [Authorize]
 
-<h3>Viewer</h3>
+<h3>Serilog Viewer</h3>
+
+@if (connections.Length == 0)
+{
+	<div class="alert alert-info">
+		<p>No connections configured. <a href="/Connections">Add a connection</a> to start viewing logs.</p>
+	</div>
+}
+else
+{
+	<div class="mb-3">
+		<label for="connectionSelect" class="form-label">Select Connection:</label>
+		<RadzenDropDown @bind-Value="selectedConnectionId" 
+						Data="connections" 
+						TextProperty="ApplicationName" 
+						ValueProperty="Id"
+						Name="connectionSelect"
+						Placeholder="Choose a connection..."
+						Change="OnConnectionChanged" />
+	</div>
+
+	@if (selectedConnection != null)
+	{
+		<div class="mb-3">
+			<div class="d-flex gap-2">
+				<RadzenTextBox @bind-Value="searchText" 
+							   Placeholder="Search logs..." 
+							   class="flex-grow-1" />
+				<RadzenButton Text="Search" 
+							  Click="OnSearchClicked" 
+							  ButtonStyle="ButtonStyle.Primary" />
+				<RadzenButton Text="Clear" 
+							  Click="OnClearClicked" 
+							  ButtonStyle="ButtonStyle.Secondary" />
+			</div>
+			@if (!string.IsNullOrEmpty(errorMessage))
+			{
+				<div class="alert alert-danger mt-2">@errorMessage</div>
+			}
+		</div>
+
+		@if (loading)
+		{
+			<div class="text-center">
+				<RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+				<p>Loading log entries...</p>
+			</div>
+		}
+		else
+		{
+			<SerilogGrid Entries="@entries" RequestIdClicked="OnRequestIdClicked" />
+		}
+	}
+}
 
 @code {
 	private ApplicationUser? user;
+	private Connection[] connections = [];
+	private int? selectedConnectionId;
+	private Connection? selectedConnection;
+	private IEnumerable<SerilogEntry> entries = [];
+	private string searchText = string.Empty;
+	private string errorMessage = string.Empty;
+	private bool loading = false;
+
+	protected override async Task OnInitializedAsync()
+	{
+		user = await CurrentUser.GetAsync();
+		await LoadConnections();
+	}
+
+	private async Task LoadConnections()
+	{
+		using var db = DbFactory.CreateDbContext();
+		connections = await db
+			.Connections
+			.Where(c => c.OwnerUserId == user!.UserId)
+			.OrderBy(c => c.ApplicationName)
+			.ToArrayAsync();
+	}
+
+	private async Task OnConnectionChanged(object value)
+	{
+		selectedConnectionId = (int?)value;
+		selectedConnection = connections.FirstOrDefault(c => c.Id == selectedConnectionId);
+		
+		if (selectedConnection != null)
+		{
+			await LoadEntries();
+		}
+		else
+		{
+			entries = [];
+		}
+	}
+
+	private async Task OnSearchClicked()
+	{
+		await LoadEntries();
+	}
+
+	private async Task OnClearClicked()
+	{
+		searchText = string.Empty;
+		await LoadEntries();
+	}
+
+	private async Task LoadEntries()
+	{
+		if (selectedConnection == null) 
+		{
+			entries = [];
+			return;
+		}
+
+		loading = true;
+		errorMessage = string.Empty;
+		StateHasChanged();
+
+		try
+		{
+			var criteria = string.IsNullOrWhiteSpace(searchText) ? null : searchText;
+			entries = await Client.GetEntriesAsync(
+				selectedConnection.Endpoint, 
+				selectedConnection.HeaderSecret, 
+				criteria);
+		}
+		catch (Exception ex)
+		{
+			errorMessage = $"Failed to load log entries: {ex.Message}";
+			entries = [];
+		}
+		finally
+		{
+			loading = false;
+			StateHasChanged();
+		}
+	}
+
+	private async Task OnRequestIdClicked(string requestId)
+	{
+		if (!string.IsNullOrEmpty(requestId))
+		{
+			searchText = requestId;
+			await LoadEntries();
+		}
+	}
 }
