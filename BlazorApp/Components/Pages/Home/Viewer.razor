@@ -27,29 +27,18 @@ else
 
 	@if (selectedConnection != null)
 	{
-		@* TODO: FilterBar component will be added in a future enhancement
-		   FilterBar requires SerilogSourceContextMetricsQuery which needs to be adapted for SerilogApiConnectorClient *@
+		<div class="mb-3">
+			<FilterBar @bind-Criteria="filterCriteria" />
+		</div>
 		
 		<div class="mb-3">
-			<div class="d-flex gap-2">
-				<RadzenTextBox @bind-Value="searchText" 
-							   Placeholder="Search logs..." 
-							   class="flex-grow-1"
-							   @onkeypress="@(async (e) => { if (e.Key == "Enter") await OnSearchClicked(); })" />
-				<RadzenButton Text="Search" 
-							  Click="OnSearchClicked" 
-							  ButtonStyle="ButtonStyle.Primary" 
-							  Disabled="loading" />
-				<RadzenButton Text="Clear" 
-							  Click="OnClearClicked" 
-							  ButtonStyle="ButtonStyle.Secondary" 
-							  Disabled="loading" />
-			</div>
-			@if (!string.IsNullOrEmpty(errorMessage))
-			{
-				<div class="alert alert-danger mt-2">@errorMessage</div>
-			}
+			<SearchBar TDbContext="ApplicationDbContext" @bind-SearchText="searchText" />
 		</div>
+		
+		@if (!string.IsNullOrEmpty(errorMessage))
+		{
+			<div class="alert alert-danger mt-2">@errorMessage</div>
+		}
 
 		@if (loading)
 		{
@@ -80,9 +69,36 @@ else
 	private int? selectedConnectionId;
 	private Connection? selectedConnection;
 	private IEnumerable<SerilogEntry> entries = [];
-	private string searchText = string.Empty;
+	private string _searchText = string.Empty;
+	private string _filterCriteria = string.Empty;
 	private string errorMessage = string.Empty;
 	private bool loading = false;
+
+	private string searchText
+	{
+		get => _searchText;
+		set
+		{
+			if (_searchText != value)
+			{
+				_searchText = value;
+				_ = Task.Run(async () => await LoadEntries());
+			}
+		}
+	}
+
+	private string filterCriteria
+	{
+		get => _filterCriteria;
+		set
+		{
+			if (_filterCriteria != value)
+			{
+				_filterCriteria = value;
+				_ = Task.Run(async () => await LoadEntries());
+			}
+		}
+	}
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -116,17 +132,6 @@ else
 		}
 	}
 
-	private async Task OnSearchClicked()
-	{
-		await LoadEntries();
-	}
-
-	private async Task OnClearClicked()
-	{
-		searchText = string.Empty;
-		await LoadEntries();
-	}
-
 	private async Task LoadEntries()
 	{
 		if (selectedConnection == null) 
@@ -141,7 +146,11 @@ else
 
 		try
 		{
-			var criteria = string.IsNullOrWhiteSpace(searchText) ? null : searchText;
+			// Combine filter criteria and search text for the API call
+			var criteria = string.IsNullOrWhiteSpace(filterCriteria) && string.IsNullOrWhiteSpace(searchText) 
+				? null 
+				: $"{filterCriteria} {searchText}".Trim();
+				
 			entries = await Client.GetEntriesAsync(
 				selectedConnection.Endpoint, 
 				selectedConnection.HeaderSecret, 
