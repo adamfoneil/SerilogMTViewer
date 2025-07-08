@@ -1,0 +1,14 @@
+﻿@page "/Connections"
+@attribute [Authorize]
+
+<h3>API Connections</h3>
+<p>Add connections to your API projects</p>
+
+@code {
+	private ApplicationUser? user;
+
+	protected override async Task OnInitializedAsync()
+	{
+		user = await CurrentUser.GetAsync();		
+	}
+}

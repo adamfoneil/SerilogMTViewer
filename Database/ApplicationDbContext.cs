@@ -36,11 +36,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 			{
 				case EntityState.Added:
 					entity.Entity.CreatedBy = user?.UserName ?? "system";
-					entity.Entity.DateCreated = LocalDateTime(user?.TimeZoneId);
+					entity.Entity.CreatedAt = LocalDateTime(user?.TimeZoneId);
 					break;
 				case EntityState.Modified:
 					entity.Entity.ModifiedBy = user?.UserName ?? "system";
-					entity.Entity.DateModified = LocalDateTime(user?.TimeZoneId);
+					entity.Entity.ModifiedAt = LocalDateTime(user?.TimeZoneId);
 					break;
 			}
 		}

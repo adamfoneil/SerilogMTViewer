@@ -9,6 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Components\Settings\**" />
+    <Content Remove="Components\Settings\**" />
+    <EmbeddedResource Remove="Components\Settings\**" />
+    <None Remove="Components\Settings\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>

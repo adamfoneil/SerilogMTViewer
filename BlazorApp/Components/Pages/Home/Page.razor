@@ -1,0 +1,14 @@
+﻿@page "/"
+@inject NavigationManager Nav
+
+<PageTitle>Serilog Viewer</PageTitle>
+
+<AuthorizeView>
+	<Authorized>
+
+	</Authorized>
+	<NotAuthorized>
+		<Landing />
+	</NotAuthorized>
+</AuthorizeView>
+

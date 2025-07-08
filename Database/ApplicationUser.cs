@@ -11,6 +11,8 @@ public class ApplicationUser : IdentityUser, IClaimData
 	public int UserId { get; set; }
 	public string? TimeZoneId { get; set; }
 
+	public ICollection<Connection> Connections { get; set; } = [];
+
 	public void FromClaims(IEnumerable<Claim> claims)
 	{
 		UserId = int.Parse(claims.GetClaimValue(nameof(UserId)) ?? "0");

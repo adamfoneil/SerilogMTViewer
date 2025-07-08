@@ -12,5 +12,5 @@ public class ApplicationLogLevels() : LogLevels(LogEventLevel.Debug)
 		["System"] = new(LogEventLevel.Warning)
 	};
 
-	public override Dictionary<string, LoggingLevelSwitch> LoggingLevels => throw new NotImplementedException();
+	public override Dictionary<string, LoggingLevelSwitch> LoggingLevels => _levels;
 }
