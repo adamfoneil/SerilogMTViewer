@@ -1,4 +1,6 @@
-﻿@inject IDbContextFactory<ApplicationDbContext> DbFactory
+﻿@using SerilogBlazor.ConnectorClient
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject SerilogApiConnectorClient Client
 @attribute [Authorize]
 
 <h3>Viewer</h3>
