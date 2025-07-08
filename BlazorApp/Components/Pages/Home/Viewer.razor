@@ -93,6 +93,7 @@ else
 	private async Task LoadConnections()
 	{
 		using var db = DbFactory.CreateDbContext();
+
 		connections = await db
 			.Connections
 			.Where(c => c.OwnerUserId == user!.UserId)
