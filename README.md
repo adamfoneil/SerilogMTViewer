@@ -1,3 +1,3 @@
-This is a multi-tenant Serilog viewer app for API projects that don't have a web-facing UI of their own.
+This is a multi-tenant Serilog viewer app for API projects that don't have a web-facing UI of their own, leverages [SerilogBlazor](https://github.com/adamfoneil/SerilogBlazor).
 
 More info to come....
