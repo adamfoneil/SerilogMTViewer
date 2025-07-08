@@ -1,14 +1,99 @@
 ﻿@page "/Connections"
 @attribute [Authorize]
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 
 <h3>API Connections</h3>
 <p>Add connections to your API projects</p>
 
+<GridInsertButton TItem="Connection" Grid="grid" OnCreateItem="() => new() { OwnerUserId = user!.UserId }" />
+<RadzenDataGrid TItem="Connection" Data="connections" @ref="grid" RowCreate="SaveConnection" RowUpdate="SaveConnection">
+	<Columns>
+		<RadzenDataGridColumn TItem="Connection" Title="Application Name" Property="ApplicationName">
+			<EditTemplate>
+				<RadzenRequiredValidator Component="ApplicationName" Text="Application name is required" />
+				<RadzenTextBox @bind-Value="context.ApplicationName" Name="ApplicationName" Placeholder="Application Name" MaxLength="100" />
+			</EditTemplate>
+		</RadzenDataGridColumn>
+		<RadzenDataGridColumn TItem="Connection" Title="Endpoint" Property="Endpoint">
+			<Template>
+				<span style="white-space:normal">@context.Endpoint</span>
+			</Template>
+			<EditTemplate>
+				<RadzenRequiredValidator Component="Endpoint" Text="Endpoint URL is required" />
+				<RadzenTextBox @bind-Value="context.Endpoint" Name="Endpoint" Placeholder="API Endpoint URL" MaxLength="200" />
+			</EditTemplate>
+		</RadzenDataGridColumn>
+		<RadzenDataGridColumn TItem="Connection" Title="Header Secret" Property="HeaderSecret">
+			<Template>
+				<span>@(string.IsNullOrEmpty(context.HeaderSecret) ? "" : "●●●●●●●●")</span>
+			</Template>
+			<EditTemplate>
+				<RadzenRequiredValidator Component="HeaderSecret" Text="Header secret is required" />
+				<RadzenTextBox @bind-Value="context.HeaderSecret" Name="HeaderSecret" Placeholder="Secret Key" MaxLength="100" />
+			</EditTemplate>
+		</RadzenDataGridColumn>
+		<RadzenDataGridColumn TItem="Connection" Title="Created" Property="CreatedAt" FormatString="{0:yyyy-MM-dd HH:mm}">
+		</RadzenDataGridColumn>
+		<GridControls TItem="Connection" Grid="grid" DeleteRow="DeleteConnection" />
+	</Columns>
+</RadzenDataGrid>
+
 @code {
 	private ApplicationUser? user;
+	private Connection[] connections = [];
+	private RadzenDataGrid<Connection>? grid;
 
 	protected override async Task OnInitializedAsync()
 	{
-		user = await CurrentUser.GetAsync();		
+		user = await CurrentUser.GetAsync();
+		await LoadConnections();
+	}
+
+	private async Task LoadConnections()
+	{
+		using var db = DbFactory.CreateDbContext();
+		connections = await db
+			.Connections
+			.Where(c => c.OwnerUserId == user!.UserId)
+			.OrderBy(c => c.ApplicationName)
+			.ToArrayAsync();
+	}
+
+	private async Task SaveConnection(Connection row)
+	{
+		try
+		{
+			using var db = DbFactory.CreateDbContext();
+			
+			// Ensure the connection is owned by the current user
+			row.OwnerUserId = user!.UserId;
+			
+			db.Connections.Update(row);
+			await db.SaveChangesAsync(user);
+			await LoadConnections();
+		}
+		catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("IX_Connections_OwnerUserId_ApplicationName") == true)
+		{
+			await Dialogs.Alert("A connection with this application name already exists.", "Duplicate Application Name");
+		}
+		catch (Exception ex)
+		{
+			await Dialogs.Alert($"An error occurred while saving: {ex.Message}", "Error");
+		}
+	}
+
+	private async Task DeleteConnection(Connection row)
+	{
+		try
+		{
+			using var db = DbFactory.CreateDbContext();
+			db.Connections.Remove(row);
+			await db.SaveChangesAsync(user);
+			await LoadConnections();
+		}
+		catch (Exception ex)
+		{
+			await Dialogs.Alert($"An error occurred while deleting: {ex.Message}", "Error");
+		}
 	}
 }
