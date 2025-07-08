@@ -27,17 +27,23 @@ else
 
 	@if (selectedConnection != null)
 	{
+		@* TODO: FilterBar component will be added in a future enhancement
+		   FilterBar requires SerilogSourceContextMetricsQuery which needs to be adapted for SerilogApiConnectorClient *@
+		
 		<div class="mb-3">
 			<div class="d-flex gap-2">
 				<RadzenTextBox @bind-Value="searchText" 
 							   Placeholder="Search logs..." 
-							   class="flex-grow-1" />
+							   class="flex-grow-1"
+							   @onkeypress="@(async (e) => { if (e.Key == "Enter") await OnSearchClicked(); })" />
 				<RadzenButton Text="Search" 
 							  Click="OnSearchClicked" 
-							  ButtonStyle="ButtonStyle.Primary" />
+							  ButtonStyle="ButtonStyle.Primary" 
+							  Disabled="loading" />
 				<RadzenButton Text="Clear" 
 							  Click="OnClearClicked" 
-							  ButtonStyle="ButtonStyle.Secondary" />
+							  ButtonStyle="ButtonStyle.Secondary" 
+							  Disabled="loading" />
 			</div>
 			@if (!string.IsNullOrEmpty(errorMessage))
 			{
@@ -52,9 +58,18 @@ else
 				<p>Loading log entries...</p>
 			</div>
 		}
-		else
+		else if (entries.Any())
 		{
+			<div class="mb-2">
+				<small class="text-muted">Showing @entries.Count() log entries</small>
+			</div>
 			<SerilogGrid Entries="@entries" RequestIdClicked="OnRequestIdClicked" />
+		}
+		else if (selectedConnection != null && !loading)
+		{
+			<div class="alert alert-info">
+				<p>No log entries found. Try a different search or check your connection configuration.</p>
+			</div>
 		}
 	}
 }
