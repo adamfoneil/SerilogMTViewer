@@ -1,7 +1,8 @@
 ﻿@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@attribute [Authorize]
 
 <h3>Viewer</h3>
 
 @code {
-
+	private ApplicationUser? user;
 }
