@@ -1,7 +1,9 @@
 ﻿@using SerilogBlazor.ConnectorClient
 @using SerilogBlazor.Abstractions
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
-@inject SerilogApiConnectorClient Client
+@inject IHttpClientFactory HttpClientFactory
+@inject ILoggerFactory LoggerFactory
+@inject ILogger<Viewer> Logger
 @attribute [Authorize]
 
 <h3>Serilog Viewer</h3>
@@ -17,24 +19,24 @@ else
 	<div class="mb-3">
 		<label for="connectionSelect" class="form-label">Select Connection:</label>
 		<RadzenDropDown @bind-Value="selectedConnectionId" 
-						Data="connections" 
-						TextProperty="ApplicationName" 
-						ValueProperty="Id"
-						Name="connectionSelect"
-						Placeholder="Choose a connection..."
-						Change="OnConnectionChanged" />
+		Data="connections" 
+		TextProperty="ApplicationName" 
+		ValueProperty="Id"
+		Name="connectionSelect"
+		Placeholder="Choose a connection..."
+		Change="OnConnectionChanged" />
 	</div>
 
 	@if (selectedConnection != null)
 	{
 		<div class="mb-3">
-			<FilterBar @bind-Criteria="filterCriteria" />
+			<FilterBar />
 		</div>
-		
+
 		<div class="mb-3">
-			<SearchBar TDbContext="ApplicationDbContext" @bind-SearchText="searchText" />
+			<SearchBar TDbContext="ApplicationDbContext" Query="query" />
 		</div>
-		
+
 		@if (!string.IsNullOrEmpty(errorMessage))
 		{
 			<div class="alert alert-danger mt-2">@errorMessage</div>
@@ -52,7 +54,7 @@ else
 			<div class="mb-2">
 				<small class="text-muted">Showing @entries.Count() log entries</small>
 			</div>
-			<SerilogGrid Entries="@entries" RequestIdClicked="OnRequestIdClicked" />
+			<SerilogGrid Entries="entries" RequestIdClicked="OnRequestIdClicked" />
 		}
 		else if (selectedConnection != null && !loading)
 		{
@@ -64,6 +66,7 @@ else
 }
 
 @code {
+	private ISerilogQuery? query;
 	private ApplicationUser? user;
 	private Connection[] connections = [];
 	private int? selectedConnectionId;
@@ -121,7 +124,7 @@ else
 	{
 		selectedConnectionId = (int?)value;
 		selectedConnection = connections.FirstOrDefault(c => c.Id == selectedConnectionId);
-		
+
 		if (selectedConnection != null)
 		{
 			await LoadEntries();
@@ -146,23 +149,25 @@ else
 
 		try
 		{
+			query = new SerilogApiConnectorClient(
+				LoggerFactory.CreateLogger<SerilogApiConnectorClient>(), 
+				HttpClientFactory, selectedConnection.Endpoint, selectedConnection.HeaderSecret);
+
 			// Combine filter criteria and search text for the API call
 			var criteria = string.IsNullOrWhiteSpace(filterCriteria) && string.IsNullOrWhiteSpace(searchText) 
 				? null 
 				: $"{filterCriteria} {searchText}".Trim();
 				
-			entries = await Client.GetEntriesAsync(
-				selectedConnection.Endpoint, 
-				selectedConnection.HeaderSecret, 
-				criteria);
+			entries = await query.ExecuteAsync(criteria);
 		}
 		catch (Exception ex)
 		{
+			Logger.LogError(ex, "Error loading log entries");
 			errorMessage = $"Failed to load log entries: {ex.Message}";
 			entries = [];
 		}
 		finally
-		{
+		{			
 			loading = false;
 			StateHasChanged();
 		}

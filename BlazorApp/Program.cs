@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Radzen;
 using Serilog;
-using SerilogBlazor.ConnectorClient;
 using SerilogBlazor.Postgres;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,6 +18,7 @@ var connectionString = AppDbFactory.GetConnectionString();
 var logLevels = new ApplicationLogLevels();
 Log.Logger = logLevels
     .GetConfiguration()
+    .WriteTo.Console()
     .WriteTo.PostgreSQL(connectionString, "serilog", columnOptions: PostgresColumnOptions.Default, needAutoCreateTable: true)
     .Enrich.FromLogContext()
     .CreateLogger();
@@ -27,7 +27,6 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddRadzenComponents();
 builder.Services.AddSerilog();
 builder.Services.AddHttpClient();
-builder.Services.AddScoped<SerilogApiConnectorClient>();
 
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
