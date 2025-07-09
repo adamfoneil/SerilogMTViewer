@@ -1,10 +1,184 @@
 ﻿@using SerilogBlazor.ConnectorClient
+@using SerilogBlazor.Abstractions
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
-@inject SerilogApiConnectorClient Client
+@inject IHttpClientFactory HttpClientFactory
+@inject ILoggerFactory LoggerFactory
+@inject ILogger<Viewer> Logger
 @attribute [Authorize]
 
-<h3>Viewer</h3>
+<h3>Serilog Viewer</h3>
+
+@if (connections.Length == 0)
+{
+	<div class="alert alert-info">
+		<p>No connections configured. <a href="/Connections">Add a connection</a> to start viewing logs.</p>
+	</div>
+}
+else
+{
+	<div class="mb-3">
+		<label for="connectionSelect" class="form-label">Select Connection:</label>
+		<RadzenDropDown @bind-Value="selectedConnectionId" 
+		Data="connections" 
+		TextProperty="ApplicationName" 
+		ValueProperty="Id"
+		Name="connectionSelect"
+		Placeholder="Choose a connection..."
+		Change="OnConnectionChanged" />
+	</div>
+
+	@if (selectedConnection != null)
+	{
+		<div class="mb-3">
+			<FilterBar />
+		</div>
+
+		<div class="mb-3">
+			<SearchBar TDbContext="ApplicationDbContext" Query="query" />
+		</div>
+
+		@if (!string.IsNullOrEmpty(errorMessage))
+		{
+			<div class="alert alert-danger mt-2">@errorMessage</div>
+		}
+
+		@if (loading)
+		{
+			<div class="text-center">
+				<RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+				<p>Loading log entries...</p>
+			</div>
+		}
+		else if (entries.Any())
+		{
+			<div class="mb-2">
+				<small class="text-muted">Showing @entries.Count() log entries</small>
+			</div>
+			<SerilogGrid Entries="entries" RequestIdClicked="OnRequestIdClicked" />
+		}
+		else if (selectedConnection != null && !loading)
+		{
+			<div class="alert alert-info">
+				<p>No log entries found. Try a different search or check your connection configuration.</p>
+			</div>
+		}
+	}
+}
 
 @code {
+	private ISerilogQuery? query;
 	private ApplicationUser? user;
+	private Connection[] connections = [];
+	private int? selectedConnectionId;
+	private Connection? selectedConnection;
+	private IEnumerable<SerilogEntry> entries = [];
+	private string _searchText = string.Empty;
+	private string _filterCriteria = string.Empty;
+	private string errorMessage = string.Empty;
+	private bool loading = false;
+
+	private string searchText
+	{
+		get => _searchText;
+		set
+		{
+			if (_searchText != value)
+			{
+				_searchText = value;
+				_ = Task.Run(async () => await LoadEntries());
+			}
+		}
+	}
+
+	private string filterCriteria
+	{
+		get => _filterCriteria;
+		set
+		{
+			if (_filterCriteria != value)
+			{
+				_filterCriteria = value;
+				_ = Task.Run(async () => await LoadEntries());
+			}
+		}
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		user = await CurrentUser.GetAsync();
+		await LoadConnections();
+	}
+
+	private async Task LoadConnections()
+	{
+		using var db = DbFactory.CreateDbContext();
+
+		connections = await db
+			.Connections
+			.Where(c => c.OwnerUserId == user!.UserId)
+			.OrderBy(c => c.ApplicationName)
+			.ToArrayAsync();
+	}
+
+	private async Task OnConnectionChanged(object value)
+	{
+		selectedConnectionId = (int?)value;
+		selectedConnection = connections.FirstOrDefault(c => c.Id == selectedConnectionId);
+
+		if (selectedConnection != null)
+		{
+			await LoadEntries();
+		}
+		else
+		{
+			entries = [];
+		}
+	}
+
+	private async Task LoadEntries()
+	{
+		if (selectedConnection == null) 
+		{
+			entries = [];
+			return;
+		}
+
+		loading = true;
+		errorMessage = string.Empty;
+		StateHasChanged();
+
+		try
+		{
+			query = new SerilogApiConnectorClient(
+				LoggerFactory.CreateLogger<SerilogApiConnectorClient>(), 
+				HttpClientFactory, selectedConnection.Endpoint, selectedConnection.HeaderSecret);
+
+			// Combine filter criteria and search text for the API call
+			var criteria = string.IsNullOrWhiteSpace(filterCriteria) && string.IsNullOrWhiteSpace(searchText) 
+				? null 
+				: $"{filterCriteria} {searchText}".Trim();
+				
+			entries = await query.ExecuteAsync(criteria);
+		}
+		catch (Exception ex)
+		{
+			Logger.LogError(ex, "Error loading log entries");
+			errorMessage = $"Failed to load log entries: {ex.Message}";
+			entries = [];
+		}
+		finally
+		{			
+			loading = false;
+			StateHasChanged();
+		}
+	}
+
+	private async Task OnRequestIdClicked(string requestId)
+	{
+		if (!string.IsNullOrEmpty(requestId))
+		{
+			searchText = requestId;
+			await LoadEntries();
+		}
+	}
 }
